@@ -5,7 +5,7 @@ import { PowerUp } from './powerup.js';
 import { Obstacle } from './obstacle.js';
 import { drawThruster, updateThrusterScale } from './thruster.js';
 import { shootSound, hitSound, powerUpSound, damageSound, levelUpSound, createAmbientMusic, activeSounds, stopAllSounds } from './audio.js';
-import {displayIntroStory} from './story.js'
+import { displayIntroStory, displayLevel1Story, displayLevel2Story, displayLevel3Story, displayLevel4Story, displayLevel5Story } from './story.js';
 
 let enemies = [];
 let bullets = [];
@@ -30,6 +30,30 @@ export function initGame() {
     enemiesToNextLevel = 10;
     createAmbientMusic();
     displayIntroStory(ctx);
+    
+    setTimeout(() => {
+        startLevel(level);
+    }, 5000); // 5-second delay for the intro story
+}
+
+function startLevel(level) {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    if (level === 1) {
+        displayLevel1Story(ctx);
+    } else if (level === 2) {
+        displayLevel2Story(ctx);
+    } else if (level === 3) {
+        displayLevel3Story(ctx);
+    } else if (level === 4) {
+        displayLevel4Story(ctx);
+    } else if (level === 5) {
+        displayLevel5Story(ctx);
+    }
+
+    setTimeout(() => {
+        gameLoop(); // Start the game loop after the story is displayed
+    }, 5000); // 5-second delay for the level story
 }
 
 function spawnEnemy() {
@@ -69,7 +93,6 @@ function spawnObstacle() {
     obstacles.push(obstacle);
 }
 
-
 export function update() {
     if (gameOver) {
         stopAllSounds(); // Stop all sounds when the game is over
@@ -104,6 +127,9 @@ export function update() {
                         enemiesDefeated = 0;
                         enemiesToNextLevel += 5;
                         levelUpSound();
+                        setTimeout(() => {
+                            startLevel(level); // Start next level with story
+                        }, 500); // Brief delay before next level
                     }
                 }
             }
