@@ -5,7 +5,7 @@ import { PowerUp } from './powerup.js';
 import { Obstacle } from './obstacle.js';
 import { drawThruster, updateThrusterScale } from './thruster.js';
 import { shootSound, hitSound, powerUpSound, damageSound, levelUpSound, createAmbientMusic, activeSounds, stopAllSounds } from './audio.js';
-import {displayIntroStory} from './.js'
+import {displayIntroStory} from './story.js'
 
 let enemies = [];
 let bullets = [];
