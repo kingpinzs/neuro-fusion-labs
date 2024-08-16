@@ -28,8 +28,9 @@ export function initGame() {
     level = 1;
     enemiesDefeated = 0;
     enemiesToNextLevel = 10;
+    gameStarted = false;  // Ensure the game doesn't start immediately
     createAmbientMusic();
-    displayIntroStory(ctx);
+    
     
     setTimeout(() => {
         startLevel(level);
@@ -38,7 +39,7 @@ export function initGame() {
 
 function startLevel(level) {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    
+    displayIntroStory(ctx);
     if (level === 1) {
         displayLevel1Story(ctx);
     } else if (level === 2) {
@@ -52,11 +53,13 @@ function startLevel(level) {
     }
 
     setTimeout(() => {
+        gameStarted = true;  // Start the game after the story is shown
         gameLoop(); // Start the game loop after the story is displayed
     }, 5000); // 5-second delay for the level story
 }
 
 function spawnEnemy() {
+     if (!gameStarted) return;  // Only spawn enemies if the game has started
     const enemy = new Enemy(
         Math.random() * (canvas.width - 30),
         0, 
@@ -69,6 +72,8 @@ function spawnEnemy() {
 }
 
 function spawnPowerUp() {
+    if (!gameStarted) return;  // Only spawn power-ups if the game has started
+
     const operations = ['x2', '/2', '^2', '+5', '-3'];
     const powerUp = new PowerUp(
         Math.random() * (canvas.width - 25),
@@ -83,6 +88,7 @@ function spawnPowerUp() {
 }
 
 function spawnObstacle() {
+    if (!gameStarted) return;  // Only spawn obstacles if the game has started
     const obstacle = new Obstacle(
         Math.random() * (canvas.width - 50),
         0,
@@ -94,7 +100,7 @@ function spawnObstacle() {
 }
 
 export function update() {
-    if (gameOver) {
+    if (!gameStarted || gameOver) {
         stopAllSounds(); // Stop all sounds when the game is over
         return;
     }
@@ -177,7 +183,7 @@ export function update() {
 }
 
 export function draw() {
-    if (!player) return;
+    if (!gameStarted || !player) return;
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -226,5 +232,5 @@ export function draw() {
 export function gameLoop() {
     update();
     draw();
-    requestAnimationFrame(gameLoop);
+    if (gameStarted) requestAnimationFrame(gameLoop);
 }
