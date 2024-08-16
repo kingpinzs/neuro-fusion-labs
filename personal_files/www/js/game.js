@@ -33,9 +33,27 @@ export function initGame() {
     createAmbientMusic();
     
     
+// Set up an event listener for any input
+    const startGameOnInput = () => {
+        if (!inputReceived) {
+            inputReceived = true;
+            gameStarted = true;
+            document.removeEventListener('keydown', startGameOnInput); // Remove listener after first input
+            document.removeEventListener('mousedown', startGameOnInput);
+            gameLoop(); // Start the game loop
+        }
+    };
+
+    document.addEventListener('keydown', startGameOnInput);
+    document.addEventListener('mousedown', startGameOnInput);
+
+    // Start the game automatically after 1 minute if no input is received
     setTimeout(() => {
-        startLevel(level);
-    }, 5000); // 5-second delay for the intro story
+        if (!inputReceived) {
+            gameStarted = true;
+            gameLoop(); // Start the game loop
+        }
+    }, 60000); // 60 seconds = 1 minute
 }
 
 function startLevel(level) {
@@ -53,10 +71,26 @@ function startLevel(level) {
         displayLevel5Story(ctx);
     }
 
+   // Similar event handling for level start
+    const startLevelOnInput = () => {
+        if (!inputReceived) {
+            inputReceived = true;
+            gameStarted = true;
+            document.removeEventListener('keydown', startLevelOnInput);
+            document.removeEventListener('mousedown', startLevelOnInput);
+            gameLoop();
+        }
+    };
+
+    document.addEventListener('keydown', startLevelOnInput);
+    document.addEventListener('mousedown', startLevelOnInput);
+
     setTimeout(() => {
-        gameStarted = true;  // Start the game after the story is shown
-        gameLoop(); // Start the game loop after the story is displayed
-    }, 5000); // 5-second delay for the level story
+        if (!inputReceived) {
+            gameStarted = true;
+            gameLoop();
+        }
+    }, 60000); // 60 seconds = 1 minute
 }
 
 function spawnEnemy() {
