@@ -16,6 +16,7 @@ let gameOver = false;
 let level = 1;
 let enemiesDefeated = 0;
 let enemiesToNextLevel = 10;
+let gameStarted = false;  // New flag to control when the game starts
 
 export function initGame() {
     initPlayer();
