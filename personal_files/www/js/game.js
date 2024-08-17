@@ -1,10 +1,10 @@
-import { ctx, canvas } from './canvas.js';
+import { ctx, canvas, setBackground } from './canvas.js';
 import { player, initPlayer, fireBullet, spaceship } from './player.js';
 import { Enemy } from './enemy.js';
 import { PowerUp } from './powerup.js';
 import { Obstacle } from './obstacle.js';
 import { drawThruster, updateThrusterScale } from './thruster.js';
-import { shootSound, hitSound, powerUpSound, damageSound, levelUpSound, createAmbientMusic, activeSounds, stopAllSounds } from './audio.js';
+import { shootSound, hitSound, powerUpSound, damageSound, levelUpSound, createAmbientMusic, createMusic, stopAllSounds } from './audio.js';
 import { displayIntroStory, displayLevel1Story, displayLevel2Story, displayLevel3Story, displayLevel4Story, displayLevel5Story } from './story.js';
 
 let enemies = [];
@@ -16,49 +16,65 @@ let gameOver = false;
 let level = 1;
 let enemiesDefeated = 0;
 let enemiesToNextLevel = 10;
-let gameStarted = false;  // New flag to control when the game starts
+let gameStarted = false;
+let inputReceived = false;
+let currentLevelData = null;
+let totalEnemiesSpawned = 0;
+let maxEnemiesToSpawn = 0;
+let enemySpawnInterval = 2000;
+let lastEnemySpawnTime = 0;
 
 export function initGame() {
     initPlayer();
+    resetGameState();
+    displayIntroStory(ctx);
+
+    // Load the first level JSON file
+    loadLevelData(level).then(() => {
+        setTimeout(() => {
+            startLevel(level);
+        }, 5000);
+    });
+}
+
+function resetGameState() {
     enemies = [];
     bullets = [];
     powerUps = [];
     obstacles = [];
     score = 0;
     gameOver = false;
-    level = 1;
     enemiesDefeated = 0;
+    totalEnemiesSpawned = 0;
     enemiesToNextLevel = 10;
-    gameStarted = false;  // Ensure the game doesn't start immediately
-    createAmbientMusic();
-    
-    
-// Set up an event listener for any input
-    const startGameOnInput = () => {
-        if (!inputReceived) {
-            inputReceived = true;
-            gameStarted = true;
-            document.removeEventListener('keydown', startGameOnInput); // Remove listener after first input
-            document.removeEventListener('mousedown', startGameOnInput);
-            gameLoop(); // Start the game loop
-        }
-    };
+    gameStarted = false;
+    inputReceived = false;
+}
 
-    document.addEventListener('keydown', startGameOnInput);
-    document.addEventListener('mousedown', startGameOnInput);
+async function loadLevelData(level) {
+    const response = await fetch(`./levels/level${level}.json`);
+    currentLevelData = await response.json();
+    console.log(`Loaded level ${level}`, currentLevelData);
 
-    // Start the game automatically after 1 minute if no input is received
-    setTimeout(() => {
-        if (!inputReceived) {
-            gameStarted = true;
-            gameLoop(); // Start the game loop
-        }
-    }, 60000); // 60 seconds = 1 minute
+    maxEnemiesToSpawn = currentLevelData.enemies.reduce((sum, enemyType) => sum + enemyType.count, 0);
+    enemySpawnInterval = 2000 - (level * 100);
+
+    // Set background image
+    setBackground(currentLevelData.background);
+
+    // Play music and ambience
+    // if (currentLevelData.music) {
+    //     stopAllSounds();
+    //     window[currentLevelData.music]();
+    // }
+    // if (currentLevelData.ambience) {
+    //     window[currentLevelData.ambience]();
+    // }
 }
 
 function startLevel(level) {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    displayIntroStory(ctx);
+
     if (level === 1) {
         displayLevel1Story(ctx);
     } else if (level === 2) {
@@ -71,72 +87,91 @@ function startLevel(level) {
         displayLevel5Story(ctx);
     }
 
-   // Similar event handling for level start
-    const startLevelOnInput = () => {
+    const startGameOnInput = () => {
         if (!inputReceived) {
             inputReceived = true;
             gameStarted = true;
-            document.removeEventListener('keydown', startLevelOnInput);
-            document.removeEventListener('mousedown', startLevelOnInput);
+            document.removeEventListener('keydown', startGameOnInput);
+            document.removeEventListener('mousedown', startGameOnInput);
             gameLoop();
         }
     };
 
-    document.addEventListener('keydown', startLevelOnInput);
-    document.addEventListener('mousedown', startLevelOnInput);
+    document.addEventListener('keydown', startGameOnInput);
+    document.addEventListener('mousedown', startGameOnInput);
 
     setTimeout(() => {
         if (!inputReceived) {
             gameStarted = true;
             gameLoop();
         }
-    }, 60000); // 60 seconds = 1 minute
+    }, 60000);
 }
 
 function spawnEnemy() {
-     if (!gameStarted) return;  // Only spawn enemies if the game has started
-    const enemy = new Enemy(
-        Math.random() * (canvas.width - 30),
-        0, 
-        30, 
-        30, 
-        1 + level * 0.5, 
-        1 + Math.floor(level / 3)
-    );
-    enemies.push(enemy);
+    if (!gameStarted || !currentLevelData) return;
+
+    if (totalEnemiesSpawned >= maxEnemiesToSpawn) return;
+
+    const now = Date.now();
+    if (now - lastEnemySpawnTime < enemySpawnInterval) return;
+
+    lastEnemySpawnTime = now;
+
+    currentLevelData.enemies.forEach((enemyType) => {
+        if (totalEnemiesSpawned < maxEnemiesToSpawn) {
+            const enemy = new Enemy(
+                Math.random() * (canvas.width - 30),
+                0,
+                30,
+                30,
+                enemyType.speed,
+                1 + Math.floor(level / 3)
+            );
+            enemies.push(enemy);
+            totalEnemiesSpawned++;
+        }
+    });
 }
 
 function spawnPowerUp() {
-    if (!gameStarted) return;  // Only spawn power-ups if the game has started
+    if (!gameStarted || !currentLevelData) return;
 
-    const operations = ['x2', '/2', '^2', '+5', '-3'];
-    const powerUp = new PowerUp(
-        Math.random() * (canvas.width - 25),
-        0,
-        25,
-        25,
-        operations[Math.floor(Math.random() * operations.length)],
-        Math.floor(Math.random() * 5) + 1,
-        1
-    );
-    powerUps.push(powerUp);
+    currentLevelData.powerUps.forEach((powerUpConfig) => {
+        if (Math.random() < powerUpConfig.chance) {
+            const powerUp = new PowerUp(
+                Math.random() * (canvas.width - 25),
+                0,
+                25,
+                25,
+                powerUpConfig.type,
+                Math.floor(Math.random() * 5) + 1,
+                1
+            );
+            powerUps.push(powerUp);
+        }
+    });
 }
 
 function spawnObstacle() {
-    if (!gameStarted) return;  // Only spawn obstacles if the game has started
-    const obstacle = new Obstacle(
-        Math.random() * (canvas.width - 50),
-        0,
-        50,
-        20,
-        2 + level * 0.3
-    );
-    obstacles.push(obstacle);
+    if (!gameStarted || !currentLevelData) return;
+
+    currentLevelData.obstacles.forEach((obstacleConfig) => {
+        if (Math.random() < obstacleConfig.frequency) {
+            const obstacle = new Obstacle(
+                Math.random() * (canvas.width - 50),
+                0,
+                50,
+                20,
+                obstacleConfig.speed
+            );
+            obstacles.push(obstacle);
+        }
+    });
 }
 
 export function update() {
     if (!gameStarted || gameOver) {
-        stopAllSounds(); // Stop all sounds when the game is over
         return;
     }
 
@@ -148,7 +183,7 @@ export function update() {
     });
 
     enemies.forEach((enemy, eIndex) => {
-        enemy.update(); // Move enemy down the screen
+        enemy.update();
         bullets.forEach((bullet, bIndex) => {
             if (
                 bullet.x < enemy.x + enemy.width &&
@@ -168,9 +203,13 @@ export function update() {
                         enemiesDefeated = 0;
                         enemiesToNextLevel += 5;
                         levelUpSound();
-                        setTimeout(() => {
-                            startLevel(level); // Start next level with story
-                        }, 500); // Brief delay before next level
+                        gameStarted = false;
+                        inputReceived = false;
+                        loadLevelData(level).then(() => {
+                            setTimeout(() => {
+                                startLevel(level);
+                            }, 500);
+                        });
                     }
                 }
             }
@@ -178,21 +217,21 @@ export function update() {
     });
 
     powerUps.forEach((powerUp, index) => {
-        powerUp.update(); // Move power-up down the screen
+        powerUp.update();
         if (
             player.x < powerUp.x + powerUp.width &&
             player.x + player.width > powerUp.x &&
             player.y < powerUp.y + powerUp.height &&
             player.y + player.height > powerUp.y
         ) {
-            powerUp.apply(player); // Apply the power-up to the player
-            powerUps.splice(index, 1); // Remove the power-up from the array
-            powerUpSound(); // Play sound effect for power-up
+            powerUp.apply(player);
+            powerUps.splice(index, 1);
+            powerUpSound();
         }
     });
 
     obstacles.forEach((obstacle, index) => {
-        obstacle.update(); // Move obstacle down the screen
+        obstacle.update();
         if (
             player.x < obstacle.x + obstacle.width &&
             player.x + player.width > obstacle.x &&
@@ -206,19 +245,19 @@ export function update() {
         }
     });
 
-    if (Math.random() < 0.02 + level * 0.01) spawnEnemy();
-    if (Math.random() < 0.005) spawnPowerUp();
-    if (Math.random() < 0.01) spawnObstacle();
+    spawnEnemy();
+    spawnPowerUp();
+    spawnObstacle();
 
     if (Math.random() < 0.1) bullets.push(fireBullet());
 
     player.x = Math.max(0, Math.min(canvas.width - player.width, player.x));
-    player.updatePlayerPosition(); // Update player position
+    player.updatePlayerPosition();
     updateThrusterScale();
 }
 
 export function draw() {
-    if (!gameStarted || !player) return;
+    if (!gameStarted) return;
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 

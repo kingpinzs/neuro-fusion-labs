@@ -1,0 +1,30 @@
+{
+    "level": 1,
+    "background": "space1.webp",
+    "music": "createMusic",
+    "ambience": "createAmbientMusic",
+    "enemies": [
+        {
+            "type": "basic",
+            "count": 10,
+            "speed": 1.5
+        }
+    ],
+    "powerUps": [
+        {
+            "type": "x2",
+            "chance": 0.05
+        },
+        {
+            "type": "+5",
+            "chance": 0.03
+        }
+    ],
+    "obstacles": [
+        {
+            "type": "asteroid",
+            "speed": 1.0,
+            "frequency": 0.01
+        }
+    ]
+}

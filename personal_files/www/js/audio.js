@@ -52,7 +52,7 @@ export function createPulsingTone() {
     activeSounds.push({ oscillator, gainNode });
 }
 
-// Function to create a spacey "whoosh" effect (e.g., when an object moves quickly)// Function to create a spacey "whoosh" effect
+// Function to create a spacey "whoosh" effect
 export function createWhooshSound() {
     const oscillator = audioCtx.createOscillator();
     const gainNode = audioCtx.createGain();
@@ -91,6 +91,36 @@ export function createAmbientMusic() {
     createAmbientSound(); // Start ambient background sound
     setInterval(createPulsingTone, 10000); // Add pulsing tones every 10 seconds
     triggerRandomSounds(); // Trigger random sounds every 5 seconds
+}
+
+// Function to create a more complex, structured background music piece
+export function createMusic() {
+    const oscillator1 = audioCtx.createOscillator();
+    const oscillator2 = audioCtx.createOscillator();
+    const gainNode1 = audioCtx.createGain();
+    const gainNode2 = audioCtx.createGain();
+
+    oscillator1.type = 'sine';
+    oscillator1.frequency.value = 440; // A4 note
+    oscillator2.type = 'square';
+    oscillator2.frequency.value = 220; // A3 note
+
+    oscillator1.connect(gainNode1);
+    oscillator2.connect(gainNode2);
+    gainNode1.connect(audioCtx.destination);
+    gainNode2.connect(audioCtx.destination);
+
+    gainNode1.gain.value = 0.2;
+    gainNode2.gain.value = 0.2;
+
+    oscillator1.start();
+    oscillator2.start();
+
+    oscillator1.stop(audioCtx.currentTime + 30); // Stop after 30 seconds
+    oscillator2.stop(audioCtx.currentTime + 30);
+
+    activeSounds.push({ oscillator: oscillator1, gainNode: gainNode1 });
+    activeSounds.push({ oscillator: oscillator2, gainNode: gainNode2 });
 }
 
 function createSound(freq, duration) {
